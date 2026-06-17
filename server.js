@@ -1,64 +1,22 @@
-const express = require("express")
-const OpenAI = require("openai")
+local HttpService = game:GetService("HttpService")
 
-const app = express()
+local url = "https://roblox-ai-bngg.onrender.com/chat?message="
 
-app.use(express.json())
+local function askAI(msg)
+	local fullUrl = url .. HttpService:UrlEncode(msg)
 
-const client = new OpenAI({
- apiKey: process.env.OPENAI_KEY
-})
+	local success, result = pcall(function()
+		return HttpService:GetAsync(fullUrl)
+	end)
 
-app.get("/", (req,res)=>{
- res.send("NPC Server Online")
-})
+	if success then
+		local data = HttpService:JSONDecode(result)
+		print(data.reply)
+		return data.reply
+	else
+		warn("Request failed")
+		return "Error"
+	end
+end
 
-app.post("/talk", async (req,res)=>{
-
- try{
-
-  const response =
-  await client.chat.completions.create({
-
-   model:"gpt-5",
-
-   messages:[
-    {
-     role:"system",
-     content:"You are a Roblox NPC."
-    },
-    {
-     role:"user",
-     content:req.body.message || ""
-    }
-   ]
-
-  })
-
-  res.json({
-   reply:
-   response.choices[0].message.content
-  })
-
- }catch(err){
-
-  console.log(err)
-
-  res.json({
-   reply:"Error"
-  })
-
- }
-
-})
-
-const PORT =
-process.env.PORT || 10000
-
-app.listen(PORT,()=>{
-
- console.log(
-  "Server running on "+PORT
- )
-
-})
+askAI("Hello NPC")
