@@ -1,22 +1,46 @@
-local HttpService = game:GetService("HttpService")
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import OpenAI from "openai";
 
-local url = "https://roblox-ai-bngg.onrender.com/chat?message="
+dotenv.config();
 
-local function askAI(msg)
-	local fullUrl = url .. HttpService:UrlEncode(msg)
+const app = express();
+app.use(cors());
+app.use(express.json());
 
-	local success, result = pcall(function()
-		return HttpService:GetAsync(fullUrl)
-	end)
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
-	if success then
-		local data = HttpService:JSONDecode(result)
-		print(data.reply)
-		return data.reply
-	else
-		warn("Request failed")
-		return "Error"
-	end
-end
+app.get("/", (req, res) => {
+  res.send("AI NPC server running");
+});
 
-askAI("Hello NPC")
+app.get("/chat", async (req, res) => {
+  try {
+    const prompt = req.query.message;
+
+    if (!prompt) {
+      return res.json({ reply: "No message sent." });
+    }
+
+    const response = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: "You are a Roblox NPC. Keep replies short and natural." },
+        { role: "user", content: prompt }
+      ],
+    });
+
+    const reply = response.choices[0].message.content;
+
+    res.json({ reply });
+
+  } catch (err) {
+    console.error(err);
+    res.json({ reply: "AI error occurred." });
+  }
+});
+
+app.listen(3000, () => console.log("Server running"));
