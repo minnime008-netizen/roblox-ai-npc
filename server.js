@@ -1,54 +1,46 @@
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
-import OpenAI from "openai";
-
-dotenv.config();
+import fetch from "node-fetch";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const OPENAI_KEY = process.env.OPENAI_API_KEY;
 
-app.get("/", (req, res) => {
-  res.send("AI NPC Server Online");
-});
+app.post("/chat", async (req, res) => {
+    const userMessage = req.body.message;
 
-app.get("/chat", async (req, res) => {
-  try {
-    const message = req.query.message;
+    try {
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${OPENAI_KEY}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                model: "gpt-4o-mini",
+                messages: [
+                    {
+                        role: "system",
+                        content: "You are a friendly Roblox NPC. Keep replies short, natural, like a real person in a game."
+                    },
+                    {
+                        role: "user",
+                        content: userMessage
+                    }
+                ]
+            })
+        });
 
-    if (!message) {
-      return res.json({ reply: "Say something." });
+        const data = await response.json();
+        const reply = data.choices[0].message.content;
+
+        res.json({ reply });
+
+    } catch (err) {
+        res.json({ reply: "I broke... try again." });
     }
-
-    const completion = await client.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a Roblox NPC. Reply to everything. Keep answers short (1-2 sentences). Be natural and game-like."
-        },
-        {
-          role: "user",
-          content: message
-        }
-      ],
-    });
-
-    const reply = completion.choices[0].message.content;
-
-    res.json({ reply });
-
-  } catch (err) {
-    console.error(err);
-    res.json({ reply: "AI error happened." });
-  }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("Server running on port", PORT));
+app.listen(3000, () => console.log("AI server running"));
